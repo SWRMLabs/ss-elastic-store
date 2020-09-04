@@ -1,4 +1,4 @@
-package elasticdb
+package ss_elastic_store
 
 import (
 	"context"
@@ -140,7 +140,7 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 	)
 	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
 	if err != nil {
-		log.Errorf("Failed check index existance %s", err.Error())
+		log.Errorf("Failed to check index existence %s", err.Error())
 		return nil, err
 	}
 	if !resp {
@@ -166,7 +166,7 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 				serializable := factory.Factory()
 				err := serializable.Unmarshal(v.Source)
 				if err != nil {
-					log.Errorf("Failed to unmarhsal data %s", err.Error())
+					log.Errorf("Failed to unmarshal data %s", err.Error())
 				}
 				list = append(list, serializable)
 				listcounter++
