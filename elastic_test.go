@@ -26,9 +26,10 @@ func TestElastic(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
+	logger.SetLogLevel("*", "Debug")
 	elastconf, err := ElasticConfig(es)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	testsuite.RunTestsuite(t, elastconf, testsuite.Basic)
+    testsuite.RunTestsuite(t, elastconf, testsuite.Basic)
 }
