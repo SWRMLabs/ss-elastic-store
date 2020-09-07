@@ -18,24 +18,24 @@ type ElasticStore struct {
 	IndexType string
 }
 
-type sselastic struct {
+type SsElastic struct {
 	eclient  *elastic.Client
 	elconfig *ElasticStore
 }
 
-func ElasticConfig(config *ElasticStore) (*sselastic, error) {
+func ElasticConfig(config *ElasticStore) (*SsElastic, error) {
 	eclient, err := elastic.NewClient(elastic.SetURL(config.Url))
 	if err != nil {
 		log.Errorf("Failed to create elastic client %s", err.Error())
 		return nil, err
 	}
-	return &sselastic{
+	return &SsElastic{
 		eclient:  eclient,
 		elconfig: config,
 	}, nil
 }
 
-func (e *sselastic) Create(i store.Item) error {
+func (e *SsElastic) Create(i store.Item) error {
 	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
 	if err != nil {
 		log.Errorf("Failed check index existence %s", err.Error())
@@ -61,7 +61,7 @@ func (e *sselastic) Create(i store.Item) error {
 	return nil
 }
 
-func (e *sselastic) Read(i store.Item) error {
+func (e *SsElastic) Read(i store.Item) error {
 	seriallizable, ok := i.(store.Serializable)
 	if ok != true {
 		return errors.New("item is not serializable")
@@ -88,7 +88,7 @@ func (e *sselastic) Read(i store.Item) error {
 	return nil
 }
 
-func (e *sselastic) Delete(i store.Item) error {
+func (e *SsElastic) Delete(i store.Item) error {
 
 	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
 	if err != nil {
@@ -107,7 +107,7 @@ func (e *sselastic) Delete(i store.Item) error {
 	return nil
 }
 
-func (e *sselastic) Update(i store.Item) error {
+func (e *SsElastic) Update(i store.Item) error {
 	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
 	if err != nil {
 		log.Debugf("Failed check index existence %s", err.Error())
@@ -127,7 +127,7 @@ func (e *sselastic) Update(i store.Item) error {
 	return nil
 }
 
-func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, error) {
+func (e *SsElastic) List(factory store.Factory, o store.ListOpt) (store.Items, error) {
 	var (
 		list = []store.Item{}
 		skip = o.Page * o.Limit
@@ -238,7 +238,7 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 	return list, nil
 }
 
-func (e *sselastic) Close() error {
+func (e *SsElastic) Close() error {
 	if e.eclient == nil {
 		return nil
 	}
