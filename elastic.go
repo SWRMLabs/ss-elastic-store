@@ -54,8 +54,7 @@ func (e *sselastic) Create(i store.Item) error {
 		log.Errorf("mrashal failed %s", err.Error())
 	}
 
-	id := i.GetId()
-	_, err = e.eclient.Index().Index(e.elconfig.Index).Type(e.elconfig.IndexType).Id(id).BodyJson(string(jsondata)).Do(context.Background())
+	_, err = e.eclient.Index().Index(e.elconfig.Index).Type(e.elconfig.IndexType).Id(i.GetId()).BodyJson(string(jsondata)).Do(context.Background())
 	if err != nil {
 		log.Errorf("Faild to add document in index %s", err.Error())
 		return err
@@ -77,9 +76,8 @@ func (e *sselastic) Read(i store.Item) error {
 	if !resp {
 		return errors.New("Index not created , read data failed")
 	}
-	id := i.GetId()
 
-	getdata, err := e.eclient.Get().Index(e.elconfig.Index).Type(e.elconfig.IndexType).Id(id).Do(context.Background())
+	getdata, err := e.eclient.Get().Index(e.elconfig.Index).Type(e.elconfig.IndexType).Id(i.GetId()).Do(context.Background())
 	if err != nil {
 		log.Errorf("Failed to read data from db %s", err.Error())
 		return err
@@ -102,8 +100,7 @@ func (e *sselastic) Delete(i store.Item) error {
 		return errors.New("Index not created , data deletion failed")
 	}
 
-	id := i.GetId()
-	_, err = e.eclient.Delete().Index(e.elconfig.Index).Type(e.elconfig.IndexType).Id(id).Do(context.Background())
+	_, err = e.eclient.Delete().Index(e.elconfig.Index).Type(e.elconfig.IndexType).Id(i.GetId()).Do(context.Background())
 	if err != nil {
 		log.Errorf("Document Deletion failed %s", err.Error())
 		return err
