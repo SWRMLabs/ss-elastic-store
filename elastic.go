@@ -12,10 +12,6 @@ import (
 
 var log = logger.Logger("store/elastic")
 
-type random struct {
-	Randstr string
-}
-
 type elasticStore struct {
 	Url       string
 	Index     string
@@ -40,10 +36,9 @@ func ElasticConfig(config *elasticStore) (*sselastic, error) {
 }
 
 func (e *sselastic) Create(i store.Item) error {
-	// eclient, err := elastic.NewClient(elastic.SetURL(e.Url))
 	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
 	if err != nil {
-		log.Errorf("Failed check index existance %s", err.Error())
+		log.Errorf("Failed check index existence %s", err.Error())
 		return err
 	}
 	if !resp {
@@ -74,7 +69,7 @@ func (e *sselastic) Read(i store.Item) error {
 	}
 	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
 	if err != nil {
-		log.Debugf("Failed check index existance %s", err.Error())
+		log.Debugf("Failed check index existence %s", err.Error())
 		return err
 	}
 
@@ -99,7 +94,7 @@ func (e *sselastic) Delete(i store.Item) error {
 
 	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
 	if err != nil {
-		log.Debugf("Failed check index existance %s", err.Error())
+		log.Debugf("Failed check index existence %s", err.Error())
 		return err
 	}
 	if !resp {
@@ -112,14 +107,13 @@ func (e *sselastic) Delete(i store.Item) error {
 		log.Errorf("Document Deletion failed %s", err.Error())
 		return err
 	}
-
 	return nil
 }
 
 func (e *sselastic) Update(i store.Item) error {
 	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
 	if err != nil {
-		log.Debugf("Failed check index existance %s", err.Error())
+		log.Debugf("Failed check index existence %s", err.Error())
 		return err
 	}
 	if !resp {
@@ -133,7 +127,6 @@ func (e *sselastic) Update(i store.Item) error {
 		log.Errorf("Document updation is failed %s", err.Error())
 		return err
 	}
-
 	return nil
 }
 
@@ -154,7 +147,7 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 	var query *elastic.BoolQuery
 	query = elastic.NewBoolQuery().Must(elastic.NewTermQuery("Namespace", strings.ToLower(factory.Factory().GetNamespace())))
 	if o.Filter != nil {
-		query = elastic.NewBoolQuery().Must(elastic.NewMatchQuery("RandStr", "random 3"))
+		return nil, errors.New("We don't have filter implementation yet")
 	}
 
 	switch o.Sort {
@@ -188,14 +181,10 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 				if err != nil {
 					log.Errorf("Failed to unmarhsal data %s", err.Error())
 				}
-				if o.Filter != nil {
-					if !o.Filter.Compare(serializable) {
-						continue
-					}
-				}
 				list = append(list, serializable)
 			}
 		}
+
 	case store.SortCreatedDesc:
 		result, err := e.eclient.Search().Query(query).Index(e.elconfig.Index).Sort("CreatedAt", false).Size(int(o.Limit)).From(int(skip)).Do(context.Background())
 		if err != nil {
@@ -207,12 +196,6 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 				err := serializable.Unmarshal(v.Source)
 				if err != nil {
 					log.Errorf("Failed to unmarhsal data %s", err.Error())
-				}
-
-				if o.Filter != nil {
-					if !o.Filter.Compare(serializable) {
-						continue
-					}
 				}
 				list = append(list, serializable)
 			}
@@ -247,21 +230,14 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 		if result.Hits.TotalHits.Value > 0 {
 			for _, v := range result.Hits.Hits {
 				serializable := factory.Factory()
-
 				err := serializable.Unmarshal(v.Source)
 				if err != nil {
 					log.Errorf("Failed to unmarhsal data %s", err.Error())
-				}
-				if o.Filter != nil {
-					if !o.Filter.Compare(serializable) {
-						continue
-					}
 				}
 				list = append(list, serializable)
 			}
 		}
 	}
-
 	return list, nil
 }
 
