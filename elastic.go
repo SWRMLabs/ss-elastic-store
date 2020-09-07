@@ -12,7 +12,7 @@ import (
 
 var log = logger.Logger("store/elastic")
 
-type elasticStore struct {
+type ElasticStore struct {
 	Url       string
 	Index     string
 	IndexType string
@@ -20,10 +20,10 @@ type elasticStore struct {
 
 type sselastic struct {
 	eclient  *elastic.Client
-	elconfig *elasticStore
+	elconfig *ElasticStore
 }
 
-func ElasticConfig(config *elasticStore) (*sselastic, error) {
+func ElasticConfig(config *ElasticStore) (*sselastic, error) {
 	eclient, err := elastic.NewClient(elastic.SetURL(config.Url))
 	if err != nil {
 		log.Errorf("Failed to create elastic client %s", err.Error())
