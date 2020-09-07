@@ -1,4 +1,4 @@
-package elasticdb
+package ss_elastic_store
 
 import (
 	"context"
@@ -11,6 +11,10 @@ import (
 )
 
 var log = logger.Logger("store/elastic")
+
+type random struct {
+	Randstr string
+}
 
 type elasticStore struct {
 	Url       string
@@ -140,20 +144,18 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 	)
 	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
 	if err != nil {
-		log.Errorf("Failed check index existance %s", err.Error())
+		log.Errorf("Failed to check index existence %s", err.Error())
 		return nil, err
 	}
 	if !resp {
-		return nil, errors.New("Index doesn't exist , data updation is failed")
+		return nil, errors.New("Index doesn't exist , list operation is failed")
 	}
 
 	var query *elastic.BoolQuery
-	if o.Filter == nil {
-		query = elastic.NewBoolQuery().Must(elastic.NewTermQuery("Namespace", strings.ToLower(factory.Factory().GetNamespace())))
-	} else {
+	query = elastic.NewBoolQuery().Must(elastic.NewTermQuery("Namespace", strings.ToLower(factory.Factory().GetNamespace())))
+	if o.Filter != nil {
 		query = elastic.NewBoolQuery().Must(elastic.NewMatchQuery("RandStr", "random 3"))
 	}
-	var listcounter int
 	switch o.Sort {
 	case store.SortNatural:
 		result, err := e.eclient.Search().Query(query).Index(e.elconfig.Index).Type(e.elconfig.IndexType).From(int(skip)).Size(int(o.Limit)).Do(context.Background())
@@ -169,7 +171,6 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 					log.Errorf("Failed to unmarhsal data %s", err.Error())
 				}
 				list = append(list, serializable)
-				listcounter++
 			}
 		}
 
@@ -178,7 +179,7 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 		if err != nil {
 			log.Errorf("Failed to get list hits in db %s", err.Error())
 		}
-		var listcounter int
+
 		if result.Hits.TotalHits.Value > 0 {
 			for _, v := range result.Hits.Hits {
 				serializable := factory.Factory()
@@ -192,7 +193,6 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 					}
 				}
 				list = append(list, serializable)
-				listcounter++
 			}
 		}
 	case store.SortCreatedDesc:
@@ -200,7 +200,6 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 		if err != nil {
 			log.Errorf("Failed to get list hits in db %s", err.Error())
 		}
-		var listcounter int
 		if result.Hits.TotalHits.Value > 0 {
 			for _, v := range result.Hits.Hits {
 				serializable := factory.Factory()
@@ -215,7 +214,6 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 					}
 				}
 				list = append(list, serializable)
-				listcounter++
 			}
 		}
 
@@ -224,7 +222,6 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 		if err != nil {
 			log.Errorf("Failed to get list hits in db %s", err.Error())
 		}
-		var listcounter int
 		if result.Hits.TotalHits.Value > 0 {
 			for _, v := range result.Hits.Hits {
 				serializable := factory.Factory()
@@ -238,7 +235,6 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 					}
 				}
 				list = append(list, serializable)
-				listcounter++
 			}
 		}
 
@@ -247,7 +243,6 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 		if err != nil {
 			log.Errorf("Failed to get list hits in db %s", err.Error())
 		}
-		var listcounter int
 		if result.Hits.TotalHits.Value > 0 {
 			for _, v := range result.Hits.Hits {
 				serializable := factory.Factory()
@@ -262,7 +257,6 @@ func (e *sselastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 					}
 				}
 				list = append(list, serializable)
-				listcounter++
 			}
 		}
 	}
