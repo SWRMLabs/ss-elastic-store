@@ -23,6 +23,10 @@ type SsElastic struct {
 	elconfig *ElasticStore
 }
 
+func (es *ElasticStore) Handler() string {
+	return "elasticdb"
+}
+
 func ElasticConfig(config *ElasticStore) (*SsElastic, error) {
 	eclient, err := elastic.NewClient(elastic.SetURL(config.Url))
 	if err != nil {
