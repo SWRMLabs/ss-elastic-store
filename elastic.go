@@ -12,34 +12,34 @@ import (
 
 var log = logger.Logger("store/elastic")
 
-type ElasticStore struct {
+type ElasticStoreConfig struct {
 	Url       string
 	Index     string
 	IndexType string
 }
 
-type SsElastic struct {
+type ssElastic struct {
 	eclient  *elastic.Client
-	elconfig *ElasticStore
+	elconfig *ElasticStoreConfig
 }
 
-func (es *ElasticStore) Handler() string {
+func (es *ElasticStoreConfig) Handler() string {
 	return "elasticdb"
 }
 
-func ElasticConfig(config *ElasticStore) (*SsElastic, error) {
+func NewElasticStore(config *ElasticStoreConfig) (*ssElastic, error) {
 	eclient, err := elastic.NewClient(elastic.SetURL(config.Url))
 	if err != nil {
 		log.Errorf("Failed to create elastic client %s", err.Error())
 		return nil, err
 	}
-	return &SsElastic{
+	return &ssElastic{
 		eclient:  eclient,
 		elconfig: config,
 	}, nil
 }
 
-func (e *SsElastic) Create(i store.Item) error {
+func (e *ssElastic) Create(i store.Item) error {
 	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
 	if err != nil {
 		log.Errorf("Failed check index existence %s", err.Error())
@@ -65,7 +65,7 @@ func (e *SsElastic) Create(i store.Item) error {
 	return nil
 }
 
-func (e *SsElastic) Read(i store.Item) error {
+func (e *ssElastic) Read(i store.Item) error {
 	seriallizable, ok := i.(store.Serializable)
 	if ok != true {
 		return errors.New("item is not serializable")
@@ -92,7 +92,7 @@ func (e *SsElastic) Read(i store.Item) error {
 	return nil
 }
 
-func (e *SsElastic) Delete(i store.Item) error {
+func (e *ssElastic) Delete(i store.Item) error {
 
 	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
 	if err != nil {
@@ -111,7 +111,7 @@ func (e *SsElastic) Delete(i store.Item) error {
 	return nil
 }
 
-func (e *SsElastic) Update(i store.Item) error {
+func (e *ssElastic) Update(i store.Item) error {
 	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
 	if err != nil {
 		log.Debugf("Failed check index existence %s", err.Error())
@@ -131,7 +131,7 @@ func (e *SsElastic) Update(i store.Item) error {
 	return nil
 }
 
-func (e *SsElastic) List(factory store.Factory, o store.ListOpt) (store.Items, error) {
+func (e *ssElastic) List(factory store.Factory, o store.ListOpt) (store.Items, error) {
 	var (
 		list = []store.Item{}
 		skip = o.Page * o.Limit
@@ -242,7 +242,7 @@ func (e *SsElastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 	return list, nil
 }
 
-func (e *SsElastic) Close() error {
+func (e *ssElastic) Close() error {
 	if e.eclient == nil {
 		return nil
 	}

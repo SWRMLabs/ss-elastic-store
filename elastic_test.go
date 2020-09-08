@@ -11,7 +11,7 @@ import (
 
 func TestElastic(t *testing.T) {
 	logger.SetLogLevel("*", "Debug")
-	es := &ElasticStore{
+	es := &ElasticStoreConfig{
 		Url:       "http://localhost:9200",
 		Index:     "elasticdb",
 		IndexType: "document",
@@ -27,7 +27,7 @@ func TestElastic(t *testing.T) {
 	defer resp.Body.Close()
 
 	logger.SetLogLevel("*", "Debug")
-	elastconf, err := ElasticConfig(es)
+	elastconf, err := NewElasticStore(es)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
