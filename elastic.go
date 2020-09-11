@@ -2,9 +2,9 @@ package ss_elastic_store
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	store "github.com/StreamSpace/ss-store"
+	"github.com/google/uuid"
 	logger "github.com/ipfs/go-log/v2"
 	elastic "github.com/olivere/elastic/v7"
 	"strings"
@@ -40,7 +40,9 @@ func NewElasticStore(config *ElasticStoreConfig) (*ssElastic, error) {
 }
 
 func (e *ssElastic) Create(i store.Item) error {
-	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
+	resp, err := e.eclient.
+		IndexExists(e.elconfig.Index).
+		Do(context.Background())
 	if err != nil {
 		log.Errorf("Failed check index existence %s", err.Error())
 		return err
@@ -52,12 +54,25 @@ func (e *ssElastic) Create(i store.Item) error {
 			return err
 		}
 	}
-	jsondata, err := json.Marshal(i)
+	idSetter, ok := i.(store.IDSetter)
+	if ok {
+		idSetter.SetID(uuid.New().String())
+	}
+	serializable, ok := i.(store.Serializable)
+	if ok != true {
+		return errors.New("item is not serializable")
+	}
+	jsondata, nil := serializable.Marshal()
 	if err != nil {
 		log.Errorf("mrashal failed %s", err.Error())
 	}
 
-	_, err = e.eclient.Index().Index(e.elconfig.Index).Type(e.elconfig.IndexType).Id(i.GetId()).BodyJson(string(jsondata)).Do(context.Background())
+	_, err = e.eclient.Index().
+		Index(e.elconfig.Index).
+		Type(e.elconfig.IndexType).
+		Id(i.GetId()).
+		BodyJson(string(jsondata)).
+		Do(context.Background())
 	if err != nil {
 		log.Errorf("Faild to add document in index %s", err.Error())
 		return err
@@ -66,11 +81,13 @@ func (e *ssElastic) Create(i store.Item) error {
 }
 
 func (e *ssElastic) Read(i store.Item) error {
-	seriallizable, ok := i.(store.Serializable)
+	serializable, ok := i.(store.Serializable)
 	if ok != true {
 		return errors.New("item is not serializable")
 	}
-	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
+	resp, err := e.eclient.
+		IndexExists(e.elconfig.Index).
+		Do(context.Background())
 	if err != nil {
 		log.Debugf("Failed check index existence %s", err.Error())
 		return err
@@ -80,12 +97,16 @@ func (e *ssElastic) Read(i store.Item) error {
 		return errors.New("Index not created , read data failed")
 	}
 
-	getdata, err := e.eclient.Get().Index(e.elconfig.Index).Type(e.elconfig.IndexType).Id(i.GetId()).Do(context.Background())
+	getdata, err := e.eclient.Get().
+		Index(e.elconfig.Index).
+		Type(e.elconfig.IndexType).
+		Id(i.GetId()).
+		Do(context.Background())
 	if err != nil {
 		log.Errorf("Failed to read data from db %s", err.Error())
 		return err
 	}
-	err = seriallizable.Unmarshal(getdata.Source)
+	err = serializable.Unmarshal(getdata.Source)
 	if err != nil {
 		log.Errorf("Failed to unmarshal received data %s", err.Error())
 	}
@@ -93,8 +114,9 @@ func (e *ssElastic) Read(i store.Item) error {
 }
 
 func (e *ssElastic) Delete(i store.Item) error {
-
-	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
+	resp, err := e.eclient.
+		IndexExists(e.elconfig.Index).
+		Do(context.Background())
 	if err != nil {
 		log.Debugf("Failed check index existence %s", err.Error())
 		return err
@@ -103,7 +125,11 @@ func (e *ssElastic) Delete(i store.Item) error {
 		return errors.New("Index not created , data deletion failed")
 	}
 
-	_, err = e.eclient.Delete().Index(e.elconfig.Index).Type(e.elconfig.IndexType).Id(i.GetId()).Do(context.Background())
+	_, err = e.eclient.Delete().
+		Index(e.elconfig.Index).
+		Type(e.elconfig.IndexType).
+		Id(i.GetId()).
+		Do(context.Background())
 	if err != nil {
 		log.Errorf("Document Deletion failed %s", err.Error())
 		return err
@@ -112,7 +138,9 @@ func (e *ssElastic) Delete(i store.Item) error {
 }
 
 func (e *ssElastic) Update(i store.Item) error {
-	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
+	resp, err := e.eclient.
+		IndexExists(e.elconfig.Index).
+		Do(context.Background())
 	if err != nil {
 		log.Debugf("Failed check index existence %s", err.Error())
 		return err
@@ -120,10 +148,13 @@ func (e *ssElastic) Update(i store.Item) error {
 	if !resp {
 		return errors.New("Index doesn't exist , data updation is failed")
 	}
-
 	id := i.GetId()
-
-	_, err = e.eclient.Update().Index(e.elconfig.Index).Type(e.elconfig.IndexType).Id(id).Doc(i).Do(context.Background())
+	_, err = e.eclient.Update().
+		Index(e.elconfig.Index).
+		Type(e.elconfig.IndexType).
+		Id(id).
+		Doc(i).
+		Do(context.Background())
 	if err != nil {
 		log.Errorf("Document updation is failed %s", err.Error())
 		return err
@@ -136,7 +167,9 @@ func (e *ssElastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 		list = []store.Item{}
 		skip = o.Page * o.Limit
 	)
-	resp, err := e.eclient.IndexExists(e.elconfig.Index).Do(context.Background())
+	resp, err := e.eclient.
+		IndexExists(e.elconfig.Index).
+		Do(context.Background())
 	if err != nil {
 		log.Errorf("Failed to check index existence %s", err.Error())
 		return nil, err
@@ -144,101 +177,38 @@ func (e *ssElastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 	if !resp {
 		return nil, errors.New("Index doesn't exist , list operation is failed")
 	}
-
 	var query *elastic.BoolQuery
-	query = elastic.NewBoolQuery().Must(elastic.NewTermQuery("Namespace", strings.ToLower(factory.Factory().GetNamespace())))
+	query = elastic.NewBoolQuery().
+		Must(elastic.NewSimpleQueryStringQuery(strings.ToLower(factory.Factory().GetNamespace())))
 	if o.Filter != nil {
 		return nil, errors.New("We don't have filter implementation yet")
 	}
 
-	switch o.Sort {
-	case store.SortNatural:
-		result, err := e.eclient.Search().Query(query).Index(e.elconfig.Index).Type(e.elconfig.IndexType).From(int(skip)).Size(int(o.Limit)).Do(context.Background())
-		if err != nil {
-			log.Errorf("Failed to get list hits in db %s", err.Error())
-			return nil, err
-		}
-		if result.Hits.TotalHits.Value > 0 {
-			for _, v := range result.Hits.Hits {
-				serializable := factory.Factory()
-				err := serializable.Unmarshal(v.Source)
-				if err != nil {
-					log.Errorf("Failed to unmarhsal data %s", err.Error())
-				}
-				list = append(list, serializable)
+	if o.Sort != store.SortNatural {
+		return nil, errors.New("We don't have sorting list")
+	}
+	result, err := e.eclient.Search().
+		Query(query).
+		Index(e.elconfig.Index).
+		Type(e.elconfig.IndexType).
+		From(int(skip)).
+		Size(int(o.Limit)).
+		Do(context.Background())
+	if err != nil {
+		log.Errorf("Failed to get list hits in db %s", err.Error())
+		return nil, err
+	}
+	if result.Hits.TotalHits.Value > 0 {
+		for _, v := range result.Hits.Hits {
+			serializable := factory.Factory()
+			err := serializable.Unmarshal(v.Source)
+			if err != nil {
+				log.Errorf("Failed to unmarhsal data %s", err.Error())
 			}
-		}
-
-	case store.SortCreatedAsc:
-		result, err := e.eclient.Search().Query(query).Index(e.elconfig.Index).Sort("CreatedAt", true).From(int(skip)).Size(int(o.Limit)).Do(context.Background())
-		if err != nil {
-			log.Errorf("Failed to get list hits in db %s", err.Error())
-		}
-
-		if result.Hits.TotalHits.Value > 0 {
-			for _, v := range result.Hits.Hits {
-				serializable := factory.Factory()
-				err := serializable.Unmarshal(v.Source)
-				if err != nil {
-					log.Errorf("Failed to unmarhsal data %s", err.Error())
-				}
-				list = append(list, serializable)
-			}
-		}
-
-	case store.SortCreatedDesc:
-		result, err := e.eclient.Search().Query(query).Index(e.elconfig.Index).Sort("CreatedAt", false).Size(int(o.Limit)).From(int(skip)).Do(context.Background())
-		if err != nil {
-			log.Errorf("Failed to get list hits in db %s", err.Error())
-		}
-		if result.Hits.TotalHits.Value > 0 {
-			for _, v := range result.Hits.Hits {
-				serializable := factory.Factory()
-				err := serializable.Unmarshal(v.Source)
-				if err != nil {
-					log.Errorf("Failed to unmarhsal data %s", err.Error())
-				}
-				list = append(list, serializable)
-			}
-		}
-
-	case store.SortUpdatedAsc:
-		result, err := e.eclient.Search().Query(query).Index(e.elconfig.Index).Sort("UpdatedAt", true).From(int(skip)).Size(int(o.Limit)).Do(context.Background())
-		if err != nil {
-			log.Errorf("Failed to get list hits in db %s", err.Error())
-		}
-		if result.Hits.TotalHits.Value > 0 {
-			for _, v := range result.Hits.Hits {
-				serializable := factory.Factory()
-				err := serializable.Unmarshal(v.Source)
-				if err != nil {
-					log.Errorf("Failed to unmarhsal data %s", err.Error())
-				}
-				if o.Filter != nil {
-					if !o.Filter.Compare(serializable) {
-						continue
-					}
-				}
-				list = append(list, serializable)
-			}
-		}
-
-	case store.SortUpdatedDesc:
-		result, err := e.eclient.Search().Query(query).Index(e.elconfig.Index).Sort("UpdatedAt", false).From(int(skip)).Size(int(o.Limit)).Do(context.Background())
-		if err != nil {
-			log.Errorf("Failed to get list hits in db %s", err.Error())
-		}
-		if result.Hits.TotalHits.Value > 0 {
-			for _, v := range result.Hits.Hits {
-				serializable := factory.Factory()
-				err := serializable.Unmarshal(v.Source)
-				if err != nil {
-					log.Errorf("Failed to unmarhsal data %s", err.Error())
-				}
-				list = append(list, serializable)
-			}
+			list = append(list, serializable)
 		}
 	}
+
 	return list, nil
 }
 
