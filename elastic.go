@@ -58,20 +58,12 @@ func (e *ssElastic) Create(i store.Item) error {
 	if ok {
 		idSetter.SetID(uuid.New().String())
 	}
-	serializable, ok := i.(store.Serializable)
-	if ok != true {
-		return errors.New("item is not serializable")
-	}
-	jsondata, nil := serializable.Marshal()
-	if err != nil {
-		log.Errorf("mrashal failed %s", err.Error())
-	}
 
 	_, err = e.eclient.Index().
 		Index(e.elconfig.Index).
 		Type(e.elconfig.IndexType).
 		Id(i.GetId()).
-		BodyJson(string(jsondata)).
+		BodyJson(i).
 		Do(context.Background())
 	if err != nil {
 		log.Errorf("Faild to add document in index %s", err.Error())
