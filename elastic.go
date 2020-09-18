@@ -3,11 +3,11 @@ package ss_elastic_store
 import (
 	"context"
 	"errors"
+	"fmt"
 	store "github.com/StreamSpace/ss-store"
 	"github.com/google/uuid"
 	logger "github.com/ipfs/go-log/v2"
 	elastic "github.com/olivere/elastic/v7"
-	"strings"
 )
 
 var log = logger.Logger("store/elastic")
@@ -38,8 +38,14 @@ func NewElasticStore(config *ElasticStoreConfig) (*ssElastic, error) {
 		elconfig: config,
 	}, nil
 }
-
+func createID(i store.Item) string {
+	return fmt.Sprintf("%s/%s", i.GetId(), i.GetNamespace())
+}
 func (e *ssElastic) Create(i store.Item) error {
+	serializable, ok := i.(store.Serializable)
+	if !ok {
+		return errors.New("Unable to serialize")
+	}
 	resp, err := e.eclient.
 		IndexExists(e.elconfig.Index).
 		Do(context.Background())
@@ -47,6 +53,7 @@ func (e *ssElastic) Create(i store.Item) error {
 		log.Errorf("Failed check index existence %s", err.Error())
 		return err
 	}
+
 	if !resp {
 		_, err := e.eclient.CreateIndex(e.elconfig.Index).Do(context.Background())
 		if err != nil {
@@ -58,12 +65,16 @@ func (e *ssElastic) Create(i store.Item) error {
 	if ok {
 		idSetter.SetID(uuid.New().String())
 	}
-
+	data, err := serializable.Marshal()
+	if err != nil {
+		log.Errorf("Failed to serialize %s", err.Error())
+		return err
+	}
 	_, err = e.eclient.Index().
 		Index(e.elconfig.Index).
 		Type(e.elconfig.IndexType).
-		Id(i.GetId()).
-		BodyJson(i).
+		Id(createID(i)).
+		BodyString(string(data)).
 		Do(context.Background())
 	if err != nil {
 		log.Errorf("Faild to add document in index %s", err.Error())
@@ -92,7 +103,7 @@ func (e *ssElastic) Read(i store.Item) error {
 	getdata, err := e.eclient.Get().
 		Index(e.elconfig.Index).
 		Type(e.elconfig.IndexType).
-		Id(i.GetId()).
+		Id(createID(i)).
 		Do(context.Background())
 	if err != nil {
 		log.Errorf("Failed to read data from db %s", err.Error())
@@ -120,7 +131,7 @@ func (e *ssElastic) Delete(i store.Item) error {
 	_, err = e.eclient.Delete().
 		Index(e.elconfig.Index).
 		Type(e.elconfig.IndexType).
-		Id(i.GetId()).
+		Id(createID(i)).
 		Do(context.Background())
 	if err != nil {
 		log.Errorf("Document Deletion failed %s", err.Error())
@@ -140,11 +151,11 @@ func (e *ssElastic) Update(i store.Item) error {
 	if !resp {
 		return errors.New("Index doesn't exist , data updation is failed")
 	}
-	id := i.GetId()
+
 	_, err = e.eclient.Update().
 		Index(e.elconfig.Index).
 		Type(e.elconfig.IndexType).
-		Id(id).
+		Id(createID(i)).
 		Doc(i).
 		Do(context.Background())
 	if err != nil {
@@ -169,13 +180,14 @@ func (e *ssElastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 	if !resp {
 		return nil, errors.New("Index doesn't exist , list operation is failed")
 	}
+	listId := fmt.Sprintf("/%s", factory.Factory().GetNamespace())
 	var query *elastic.BoolQuery
 	query = elastic.NewBoolQuery().
-		Must(elastic.NewSimpleQueryStringQuery(strings.ToLower(factory.Factory().GetNamespace())))
+		Must(elastic.NewSimpleQueryStringQuery(listId))
 	if o.Filter != nil {
 		return nil, errors.New("We don't have filter implementation yet")
 	}
-
+	
 	if o.Sort != store.SortNatural {
 		return nil, errors.New("We don't have sorting list")
 	}
@@ -200,7 +212,6 @@ func (e *ssElastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 			list = append(list, serializable)
 		}
 	}
-
 	return list, nil
 }
 
