@@ -39,7 +39,7 @@ func NewElasticStore(config *ElasticStoreConfig) (*ssElastic, error) {
 	}, nil
 }
 func createID(i store.Item) string {
-	return fmt.Sprintf("%s/%s", i.GetId(), i.GetNamespace())
+	return fmt.Sprintf("/%s%s", i.GetNamespace(), i.GetId())
 }
 func (e *ssElastic) Create(i store.Item) error {
 	serializable, ok := i.(store.Serializable)
@@ -187,7 +187,7 @@ func (e *ssElastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 	if o.Filter != nil {
 		return nil, errors.New("We don't have filter implementation yet")
 	}
-	
+
 	if o.Sort != store.SortNatural {
 		return nil, errors.New("We don't have sorting list")
 	}
