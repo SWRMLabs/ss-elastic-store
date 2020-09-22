@@ -38,9 +38,11 @@ func NewElasticStore(config *ElasticStoreConfig) (*ssElastic, error) {
 		elconfig: config,
 	}, nil
 }
+
 func createID(i store.Item) string {
-	return fmt.Sprintf("/%s%s", i.GetNamespace(), i.GetId())
+	return fmt.Sprintf("%s/%s", i.GetNamespace(), i.GetId())
 }
+
 func (e *ssElastic) Create(i store.Item) error {
 	serializable, ok := i.(store.Serializable)
 	if !ok {
@@ -180,7 +182,7 @@ func (e *ssElastic) List(factory store.Factory, o store.ListOpt) (store.Items, e
 	if !resp {
 		return nil, errors.New("Index doesn't exist , list operation is failed")
 	}
-	listId := fmt.Sprintf("/%s", factory.Factory().GetNamespace())
+	listId := fmt.Sprintf("%s/", factory.Factory().GetNamespace())
 	var query *elastic.BoolQuery
 	query = elastic.NewBoolQuery().
 		Must(elastic.NewSimpleQueryStringQuery(listId))
