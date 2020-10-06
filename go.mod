@@ -1,4 +1,4 @@
-module github.com/streamspace/ss-elastic-store
+module github.com/StreamSpace/ss-elastic-store
 
 go 1.15
 
