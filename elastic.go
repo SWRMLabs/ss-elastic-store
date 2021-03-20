@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	store "github.com/StreamSpace/ss-store"
+	store "github.com/SWRMLabs/ss-store"
 	"github.com/google/uuid"
 	logger "github.com/ipfs/go-log/v2"
 	elastic "github.com/olivere/elastic/v7"

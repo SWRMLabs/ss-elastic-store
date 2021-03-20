@@ -5,7 +5,7 @@ import (
 	logger "github.com/ipfs/go-log/v2"
 	"net/http"
 
-	testsuite "github.com/StreamSpace/ss-store/testsuite"
+	testsuite "github.com/SWRMLabs/ss-store/testsuite"
 	"testing"
 )
 
